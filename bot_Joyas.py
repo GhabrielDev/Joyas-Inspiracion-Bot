@@ -21,18 +21,18 @@ def format_ven(numero):
 
 def iniciar(message):
     user_data[message.chat.id] = {}
-    msg = bot.send_message(message.chat.id, "    ✨ **Joyas Inspiración** ✨    \n\n  ¿Cuál es el nombre de la vendedora?")
+    msg = bot.send_message(message.chat.id, "     **Joyas Inspiración**     \n\n  ¿Cuál es el nombre de la vendedora?")
     bot.register_next_step_handler(msg, proceso_tasa_bcv)
 
 def proceso_tasa_bcv(message):
     user_data[message.chat.id]['name'] = message.text.capitalize()
-    msg = bot.send_message(message.chat.id, "💰 Ingrese la tasa BCV del día:")
+    msg = bot.send_message(message.chat.id, " Ingrese la tasa BCV del día:")
     bot.register_next_step_handler(msg, proceso_tasa_paralelo)
 
 def proceso_tasa_paralelo(message):
     try:
         user_data[message.chat.id]['bcv'] = float(message.text)
-        msg = bot.send_message(message.chat.id, "📈 Ingrese la tasa Paralelo (USDT):")
+        msg = bot.send_message(message.chat.id, " Ingrese la tasa Paralelo (USDT):")
         bot.register_next_step_handler(msg, proceso_opcion_modo)
     except:
         msg = bot.reply_to(message, "❌ Error. Use solo números. Ingrese la tasa BCV de nuevo:")
@@ -68,7 +68,7 @@ def modo_detallado(message):
             precio = float(entrada)
             user_data[message.chat.id]['total'] += precio
             user_data[message.chat.id]['piezas'] += 1
-            msg = bot.send_message(message.chat.id, f"✅ Registrado: {precio}$. (Escriba otro o 'listo')")
+            msg = bot.send_message(message.chat.id, f" Registrado: {precio}$. (Escriba otro o 'listo')")
             bot.register_next_step_handler(msg, modo_detallado)
         except:
             msg = bot.send_message(message.chat.id, "❌ Ingrese un número o 'listo':")
@@ -160,5 +160,5 @@ def finalizar_y_reportar(message):
         
       
         
-print("🤖 Bot de Joyas en línea...")
+print(" Bot de Joyas Activo...")
 bot.polling()
