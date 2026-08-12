@@ -2,9 +2,25 @@ import os
 import telebot
 import sqlite3
 import openpyxl
+import threading
 from openpyxl import Workbook
 from datetime import datetime
 from dotenv import load_dotenv
+from flask import Flask
+
+
+app = Flask(__name__)
+
+@app.route('/')
+
+def home():
+    return "Bot activo"
+
+def run_web():
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+# Corre el servidor web en segundo plano
+threading.Thread(target=run_web, daemon=True).start()
 
 # Carga el archivo .env si existe en local
 load_dotenv()
