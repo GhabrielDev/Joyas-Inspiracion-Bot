@@ -4,10 +4,14 @@ import sqlite3
 import openpyxl
 from openpyxl import Workbook
 from datetime import datetime
+from dotenv import load_dotenv
 
-# --- CONFIGURACIÓN DEL BOT ---
-# Reemplaza 'llave' con el código que te dio el BotFather
-TOKEN = 'llave'
+# Carga el archivo .env si existe en local
+load_dotenv()
+
+# Lee la variable 'token' configurada en .env o en Render
+TOKEN = os.getenv("token")
+
 bot = telebot.TeleBot(TOKEN)
 
 # Constante de gestión
