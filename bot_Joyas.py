@@ -1,6 +1,9 @@
 import os
-import telebot 
+import telebot
 import sqlite3
+import openpyxl
+from openpyxl import Workbook
+from datetime import datetime
 
 # --- CONFIGURACIÓN DEL BOT ---
 # Reemplaza 'llave' con el código que te dio el BotFather
@@ -91,52 +94,119 @@ def finalizar_rapido(message):
         msg = bot.send_message(message.chat.id, "❌ Ingrese la cantidad de piezas en números:")
         bot.register_next_step_handler(msg, finalizar_rapido)
 
+# --- CONFIGURACIÓN DE EXCEL ---
+EXCEL_FILE = "Registro_Devoluciones_Joyas.xlsx"
+
+def guardar_en_excel(datos, porc, pago_v, monto_a_pagar, ganancia_g, empresa, monto_a_pagar_B):
+    """
+    Guarda los datos de la devolución como una nueva fila en el Excel.
+    """
+    headers = [
+        "Fecha/Hora", 
+        "Vendedora", 
+        "Piezas Devueltas", 
+        "Total Venta ($)", 
+        "% Comisión", 
+        "Ganancia Vendedora ($)", 
+        "Monto a Pagar ($)", 
+        "Ganancia Coach ($)", 
+        "Ganancia Empresa ($)", 
+        "Tasa BCV (Bs)", 
+        "Tasa Paralelo (Bs)",
+        "Monto a Pagar (Bs BCV)"
+    ]
+
+    # Si el archivo no existe, lo crea con encabezados
+    if not os.path.exists(EXCEL_FILE):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Devoluciones"
+        ws.append(headers)
+    else:
+        # Si existe, lo abre para agregar filas al final
+        wb = openpyxl.load_workbook(EXCEL_FILE)
+        ws = wb.active
+
+    fecha_registro = datetime.now().strftime("%Y-%m-%d %H:%M")
+    porcentaje_texto = f"{int(porc * 100)}%"
+
+    # Manejo seguro de la tasa paralelo si no se ingresó
+    tasa_paralelo = datos.get('paralelo', 0)
+
+    nueva_fila = [
+        fecha_registro,
+        datos['name'].capitalize(),
+        datos['piezas'],
+        round(datos['total'], 2),
+        porcentaje_texto,
+        round(pago_v, 2),
+        round(monto_a_pagar, 2),
+        round(ganancia_g, 2),
+        round(empresa, 2),
+        datos['bcv'],
+        tasa_paralelo,
+        round(monto_a_pagar_B, 2)
+    ]
+
+    ws.append(nueva_fila)
+    wb.save(EXCEL_FILE)
+
 def finalizar_y_reportar(message):
     datos = user_data[message.chat.id]
     total = datos['total']
     piezas = datos['piezas']
-    
+
     # Lógica de Escalas
-    if piezas >= 25: porc = 0.30
-    elif piezas >= 10: porc = 0.25
-    elif piezas >= 1: porc = 0.20
-    else: porc = 0
- 
-    #Pago en dolares 
+    if piezas >= 25:
+        porc = 0.30
+    elif piezas >= 10:
+        porc = 0.25
+    elif piezas >= 1:
+        porc = 0.20
+    else:
+        porc = 0
+
+    # Pago en dólares
     pago_v = total * porc
     monto_a_pagar = total - pago_v
     ganancia_g = total * COMISION_GESTION
     empresa = total - pago_v - ganancia_g
-    
-    # Conversión a Bolívares y aparalelo
+
+    # Conversión a Bolívares
     bs_bcv = total * datos['bcv']
-    bs_paralelo = total * datos['paralelo']
-    
+    tasa_paralelo = datos.get('paralelo', datos['bcv'])
+    bs_paralelo = total * tasa_paralelo
+
     pago_bolivares_v = pago_v * datos['bcv']
     monto_a_pagar_B = monto_a_pagar * datos['bcv']
-    ganancia_g_B =  ganancia_g * datos['bcv']
-    
-    #Reporte final y agregado la convercion a bolivares
+    ganancia_g_B = ganancia_g * datos['bcv']
+
+    # Reporte para Telegram
     resumen = (
-        f" **RESUMEN DE VENTAS**\n"
-        f" **Vendedora:** {datos['name'.capitalize()]}\n"
+        f"**RESUMEN DE VENTAS**\n"
+        f"**Vendedora:** {datos['name'].capitalize()}\n"
         f"{'='*25}\n"
-        f" Piezas: {piezas}\n"
-        f" Venta Total: {total:.2f}$\n"
-        f" Monto a pagar: {monto_a_pagar:.2f}$\n"
+        f"Piezas: {piezas}\n"
+        f"Venta Total: {total:.2f}$\n"
+        f"Monto a pagar: {monto_a_pagar:.2f}$\n"
         f"{'='*25}\n"
-        f"**Monto total vendido en bolivares:**\n"
+        f"**Monto total vendido en bolívares:**\n"
         f"• Al BCV ({datos['bcv']}): {format_ven(bs_bcv)} Bs\n"
-        f"• Al Paralelo ({datos['paralelo']}): {format_ven(bs_paralelo)} Bs\n"
+        f"• Al Paralelo ({tasa_paralelo}): {format_ven(bs_paralelo)} Bs\n"
         f"{'='*25}\n"
         f"**DEVOLUCION ($):**\n"
-        f"• Ganancia  vendedora ({int(porc*100)}%): {pago_v:.2f}$\n"
+        f"• Ganancia vendedora ({int(porc*100)}%): {pago_v:.2f}$\n"
         f"• Ganancia Coach (20%): {ganancia_g:.2f}$\n"
-        f"• **Pagar a Empresa: {empresa:.2f}$**\n" 
-        f"pago en bolivares: {monto_a_pagar_B}\n"
-        f"Reporte Guardado"
+        f"• **Pagar a Empresa:** {empresa:.2f}$\n"
+        f"• Pago en bolívares: {monto_a_pagar_B:.2f} Bs\n"
+        f"Reporte Guardado en Excel"
     )
 
+    # 1. Envía el mensaje al usuario en Telegram
+    bot.send_message(message.chat.id, resumen, parse_mode="Markdown")
+
+    # 2. Guarda la información directamente en el archivo Excel
+    guardar_en_excel(datos, porc, pago_v, monto_a_pagar, ganancia_g, empresa, monto_a_pagar_B)
       
     
     bot.send_message(message.chat.id, resumen, parse_mode="Markdown")
