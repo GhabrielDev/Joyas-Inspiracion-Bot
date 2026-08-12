@@ -8,19 +8,21 @@ from datetime import datetime
 from dotenv import load_dotenv
 from flask import Flask
 
-
-app = Flask(__name__)
+app = Flask('')
 
 @app.route('/')
-
-def home():
+def main():
     return "Bot activo"
 
-def run_web():
-    port = int(os.environ.get("PORT", 8080))
+def run():
+    port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
-# Corre el servidor web en segundo plano
-threading.Thread(target=run_web, daemon=True).start()
+
+def keep_alive():
+    server = threading.Thread(target=run)
+    server.start()
+
+keep_alive()
 
 # Carga el archivo .env si existe en local
 load_dotenv()
